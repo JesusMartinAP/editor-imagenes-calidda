@@ -1,12 +1,9 @@
 import os
 import zipfile
 from PIL import Image
-import tkinter as tk
-from tkinter import filedialog, ttk, scrolledtext, messagebox
-from concurrent.futures import ThreadPoolExecutor
-from tqdm import tqdm
 import tempfile
-import subprocess
+from concurrent.futures import ThreadPoolExecutor
+import flet as ft
 
 def resize_image(img, output_size=(1000, 1000)):
     aspect_ratio = img.width / img.height
@@ -16,9 +13,9 @@ def resize_image(img, output_size=(1000, 1000)):
     else:
         new_height = output_size[1]
         new_width = int(new_height * aspect_ratio)
-    
+
     img_resized = img.resize((new_width, new_height), Image.LANCZOS)
-    background = Image.new('RGB', output_size, (255, 255, 255))
+    background = Image.new("RGB", output_size, (255, 255, 255))
     offset = ((output_size[0] - new_width) // 2, (output_size[1] - new_height) // 2)
     background.paste(img_resized, offset)
     return background
@@ -28,11 +25,11 @@ def process_image(image_path, output_folder, output_format, original_name, outpu
         with Image.open(image_path) as img:
             img_resized = resize_image(img, output_size)
             output_path = os.path.join(output_folder, os.path.basename(original_name))
-            if output_format.lower() == 'jpg':
+            if output_format.lower() == "jpg":
                 img_resized.save(output_path, "JPEG")
-            elif output_format.lower() == 'png':
+            elif output_format.lower() == "png":
                 img_resized.save(output_path, "PNG")
-            elif output_format.lower() == 'webp':
+            elif output_format.lower() == "webp":
                 img_resized.save(output_path, "WEBP")
             else:
                 raise ValueError(f"Formato no soportado: {output_format}")
@@ -49,7 +46,7 @@ def extract_and_process_images(zip_file, output_folder, output_format, image_cod
             image_files = [os.path.join(root, f) for f in files if any(f.startswith(code) for code in image_codes)]
             with ThreadPoolExecutor() as executor:
                 futures = [executor.submit(process_image, img, output_folder, output_format, img) for img in image_files]
-                for future in tqdm(futures, desc="Procesando imágenes"):
+                for future in futures:
                     result = future.result()
                     if result:
                         processed_images.append(result)
@@ -66,7 +63,7 @@ def process_images(input_path, output_folder, output_format, image_codes):
             image_files = [os.path.join(root, f) for f in files if any(f.startswith(code) for code in image_codes)]
             with ThreadPoolExecutor() as executor:
                 futures = [executor.submit(process_image, img, output_folder, output_format, img) for img in image_files]
-                for future in tqdm(futures, desc="Procesando imágenes"):
+                for future in futures:
                     result = future.result()
                     if result:
                         processed_images.append(result)
@@ -74,63 +71,52 @@ def process_images(input_path, output_folder, output_format, image_codes):
         raise ValueError("La entrada debe ser un archivo ZIP o una carpeta")
     return processed_images
 
-def open_output_folder(folder_path):
-    if os.name == 'nt':  # Windows
-        os.startfile(folder_path)
-    elif os.name == 'posix':  # macOS y Linux
-        subprocess.call(['open', folder_path]) if sys.platform == 'darwin' else subprocess.call(['xdg-open', folder_path])
+def main(page: ft.Page):
+    page.title = "Procesador de Imágenes"
+    page.scroll = ft.ScrollMode.AUTO
 
-class ImageProcessorApp:
-    def __init__(self, master):
-        self.master = master
-        master.title("Procesador de Imágenes")
+    input_path = ft.TextField(label="Ruta de entrada", width=600)
+    codes_field = ft.TextField(label="Códigos de imágenes (uno por línea)", multiline=True, height=150)
+    format_dropdown = ft.Dropdown(label="Formato de salida", options=[ft.dropdown.Option("jpg"), ft.dropdown.Option("png"), ft.dropdown.Option("webp")])
+    output_label = ft.Text(value="", color=ft.colors.GREEN)
 
-        self.input_label = tk.Label(master, text="Entrada:")
-        self.input_label.grid(row=0, column=0, sticky="e")
-        self.input_entry = tk.Entry(master, width=50)
-        self.input_entry.grid(row=0, column=1)
-        self.input_button = tk.Button(master, text="Seleccionar", command=self.select_input)
-        self.input_button.grid(row=0, column=2)
+    def select_input(e):
+        path = ft.FilePicker(on_result=lambda f: input_path.value := f.path)
+        page.overlay.append(path)
+        path.pick_files(allow_folders=True, dialog_title="Seleccionar entrada")
 
-        self.codes_label = tk.Label(master, text="Códigos:")
-        self.codes_label.grid(row=1, column=0, sticky="ne")
-        self.codes_text = scrolledtext.ScrolledText(master, width=50, height=10)
-        self.codes_text.grid(row=1, column=1, columnspan=2)
-
-        self.format_label = tk.Label(master, text="Formato de salida:")
-        self.format_label.grid(row=2, column=0, sticky="e")
-        self.format_var = tk.StringVar(value="jpg")
-        self.format_dropdown = ttk.Combobox(master, textvariable=self.format_var, values=["jpg", "png", "webp"])
-        self.format_dropdown.grid(row=2, column=1)
-
-        self.process_button = tk.Button(master, text="Procesar Imágenes", command=self.process_images)
-        self.process_button.grid(row=3, column=1)
-
-    def select_input(self):
-        path = filedialog.askopenfilename(filetypes=[("ZIP files", "*.zip")]) or filedialog.askdirectory()
-        if path:
-            self.input_entry.delete(0, tk.END)
-            self.input_entry.insert(0, path)
-
-    def process_images(self):
-        input_path = self.input_entry.get()
-        output_format = self.format_var.get()
-        image_codes = [code.strip() for code in self.codes_text.get("1.0", tk.END).split('\n') if code.strip()]
-        if not input_path:
-            messagebox.showerror("Error", "Por favor, seleccione la entrada.")
+    def process_images_event(e):
+        if not input_path.value:
+            output_label.value = "Por favor, selecciona una entrada."
+            page.update()
             return
-        if not image_codes:
-            messagebox.showerror("Error", "Por favor, ingrese los códigos de las imágenes.")
+
+        if not codes_field.value.strip():
+            output_label.value = "Por favor, ingresa los códigos de imágenes."
+            page.update()
             return
+
         output_folder = os.path.join(os.getcwd(), "processed_images")
-        try:
-            processed_images = process_images(input_path, output_folder, output_format, image_codes)
-            messagebox.showinfo("Éxito", f"Se procesaron {len(processed_images)} imágenes.")
-            open_output_folder(output_folder)
-        except Exception as e:
-            messagebox.showerror("Error", str(e))
+        image_codes = [code.strip() for code in codes_field.value.split('\n') if code.strip()]
+        output_format = format_dropdown.value
 
-if __name__ == "__main__":
-    root = tk.Tk()
-    app = ImageProcessorApp(root)
-    root.mainloop()
+        try:
+            processed_images = process_images(input_path.value, output_folder, output_format, image_codes)
+            output_label.value = f"Se procesaron {len(processed_images)} imágenes."
+            page.update()
+        except Exception as e:
+            output_label.value = f"Error: {str(e)}"
+            page.update()
+
+    select_button = ft.ElevatedButton("Seleccionar entrada", on_click=select_input)
+    process_button = ft.ElevatedButton("Procesar Imágenes", on_click=process_images_event)
+
+    page.add(
+        ft.Row([input_path, select_button]),
+        codes_field,
+        format_dropdown,
+        process_button,
+        output_label
+    )
+
+ft.app(target=main)
