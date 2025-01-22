@@ -126,12 +126,19 @@ def main(page: ft.Page):
     process_button = ft.ElevatedButton("Procesar Imágenes", on_click=process_images_event)
     open_folder_button = ft.ElevatedButton("Abrir carpeta de salida", on_click=open_output_folder)
 
+    signature = ft.TextButton(
+        text="Desarrollado por JesusMartinAP",
+        on_click=lambda e: page.launch_url("https://www.linkedin.com/in/jesus-apolaya-8814b11b8/"),
+        style=ft.ButtonStyle(color=ft.colors.BLUE, padding=5),
+    )
+
     page.add(
         ft.Row([input_path, select_button]),
         codes_field,
         format_dropdown,
         ft.Row([process_button, open_folder_button]),
-        output_label
+        output_label,
+        ft.Row([signature], alignment=ft.MainAxisAlignment.END),
     )
 
 ft.app(target=main)
