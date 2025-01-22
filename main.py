@@ -4,6 +4,17 @@ from PIL import Image
 import tempfile
 from concurrent.futures import ThreadPoolExecutor
 import flet as ft
+import sys
+import tkinter as tk
+from tkinter import filedialog
+
+def resource_path(relative_path):
+    try:
+        # PyInstaller utiliza esta variable para almacenar la ruta base temporal
+        base_path = sys._MEIPASS
+    except Exception:
+        base_path = os.path.abspath(".")
+    return os.path.join(base_path, relative_path)
 
 def resize_image(img, output_size=(1000, 1000)):
     aspect_ratio = img.width / img.height
@@ -76,20 +87,19 @@ def main(page: ft.Page):
     page.scroll = ft.ScrollMode.AUTO
     page.bgcolor = ft.colors.WHITE
 
-    input_path = ft.TextField(label="Ruta de entrada", width=600)
+    input_path = ft.TextField(label="Ruta de entrada", width=600, read_only=True)
     codes_field = ft.TextField(label="Códigos de imágenes (uno por línea)", multiline=True, height=150)
     format_dropdown = ft.Dropdown(label="Formato de salida", options=[ft.dropdown.Option("jpg"), ft.dropdown.Option("png"), ft.dropdown.Option("webp")])
     output_label = ft.Text(value="", color=ft.colors.GREEN)
 
-    file_picker = ft.FilePicker(on_result=lambda e: set_input_path(e.files[0].path if e.files else ""))
-    page.overlay.append(file_picker)
-
-    def set_input_path(path_value):
-        input_path.value = path_value
-        page.update()
-
     def select_input(e):
-        file_picker.pick_files(dialog_title="Seleccionar entrada")
+        # Usar un cuadro de diálogo para seleccionar archivos o carpetas
+        root = tk.Tk()
+        root.withdraw()
+        file_or_dir = filedialog.askopenfilename(title="Seleccionar entrada", filetypes=[("Archivos ZIP", "*.zip"), ("Todos los archivos", "*.*")])
+        if file_or_dir:
+            input_path.value = file_or_dir
+            page.update()
 
     def open_output_folder(e):
         output_folder = os.path.join(os.getcwd(), "processed_images")
@@ -141,4 +151,5 @@ def main(page: ft.Page):
         ft.Row([signature], alignment=ft.MainAxisAlignment.END),
     )
 
-ft.app(target=main)
+if __name__ == "__main__":
+    ft.app(target=main, view=ft.WEB_BROWSER)
