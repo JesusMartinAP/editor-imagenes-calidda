@@ -35,4 +35,5 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
+    version='C:\\Users\\jmapo\\AppData\\Local\\Temp\\40df63e8-1372-41f2-aa24-2a68a07aea52',
 )

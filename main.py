@@ -7,6 +7,11 @@ import flet as ft
 import sys
 import tkinter as tk
 from tkinter import filedialog
+import logging
+
+# Configuración de logging para evitar conflictos
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 def resource_path(relative_path):
     try:
@@ -46,7 +51,7 @@ def process_image(image_path, output_folder, output_format, original_name, outpu
                 raise ValueError(f"Formato no soportado: {output_format}")
         return output_path
     except Exception as e:
-        print(f"Error procesando {image_path}: {str(e)}")
+        logger.error(f"Error procesando {image_path}: {str(e)}")
         return None
 
 def extract_and_process_images(zip_file, output_folder, output_format, image_codes):
@@ -152,4 +157,4 @@ def main(page: ft.Page):
     )
 
 if __name__ == "__main__":
-    ft.app(target=main, view=ft.WEB_BROWSER)
+    ft.app(target=main, view=ft.FLET_APP)
