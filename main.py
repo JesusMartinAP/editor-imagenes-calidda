@@ -74,6 +74,7 @@ def process_images(input_path, output_folder, output_format, image_codes):
 def main(page: ft.Page):
     page.title = "Procesador de Imágenes"
     page.scroll = ft.ScrollMode.AUTO
+    page.bgcolor = ft.colors.WHITE
 
     input_path = ft.TextField(label="Ruta de entrada", width=600)
     codes_field = ft.TextField(label="Códigos de imágenes (uno por línea)", multiline=True, height=150)
@@ -89,6 +90,14 @@ def main(page: ft.Page):
 
     def select_input(e):
         file_picker.pick_files(dialog_title="Seleccionar entrada")
+
+    def open_output_folder(e):
+        output_folder = os.path.join(os.getcwd(), "processed_images")
+        if os.path.exists(output_folder):
+            os.startfile(output_folder) if os.name == 'nt' else os.system(f'open "{output_folder}"')
+        else:
+            output_label.value = "La carpeta de salida no existe."
+            page.update()
 
     def process_images_event(e):
         if not input_path.value:
@@ -115,12 +124,13 @@ def main(page: ft.Page):
 
     select_button = ft.ElevatedButton("Seleccionar entrada", on_click=select_input)
     process_button = ft.ElevatedButton("Procesar Imágenes", on_click=process_images_event)
+    open_folder_button = ft.ElevatedButton("Abrir carpeta de salida", on_click=open_output_folder)
 
     page.add(
         ft.Row([input_path, select_button]),
         codes_field,
         format_dropdown,
-        process_button,
+        ft.Row([process_button, open_folder_button]),
         output_label
     )
 
