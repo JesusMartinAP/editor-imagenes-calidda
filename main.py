@@ -5,8 +5,11 @@ import tempfile
 from concurrent.futures import ThreadPoolExecutor
 import flet as ft
 import sys
-import tkinter as tk
-from tkinter import filedialog
+import logging
+
+# Configuración de logging para evitar conflictos
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 def resource_path(relative_path):
     try:
@@ -46,7 +49,7 @@ def process_image(image_path, output_folder, output_format, original_name, outpu
                 raise ValueError(f"Formato no soportado: {output_format}")
         return output_path
     except Exception as e:
-        print(f"Error procesando {image_path}: {str(e)}")
+        logger.error(f"Error procesando {image_path}: {str(e)}")
         return None
 
 def extract_and_process_images(zip_file, output_folder, output_format, image_codes):
@@ -92,14 +95,16 @@ def main(page: ft.Page):
     format_dropdown = ft.Dropdown(label="Formato de salida", options=[ft.dropdown.Option("jpg"), ft.dropdown.Option("png"), ft.dropdown.Option("webp")])
     output_label = ft.Text(value="", color=ft.colors.GREEN)
 
+    # Crear el FilePicker
+    file_picker = ft.FilePicker(on_result=lambda e: set_input_path(e.files[0].path if e.files else ""))
+    page.overlay.append(file_picker)
+
+    def set_input_path(path_value):
+        input_path.value = path_value
+        page.update()
+
     def select_input(e):
-        # Usar un cuadro de diálogo para seleccionar archivos o carpetas
-        root = tk.Tk()
-        root.withdraw()
-        file_or_dir = filedialog.askopenfilename(title="Seleccionar entrada", filetypes=[("Archivos ZIP", "*.zip"), ("Todos los archivos", "*.*")])
-        if file_or_dir:
-            input_path.value = file_or_dir
-            page.update()
+        file_picker.pick_files(dialog_title="Seleccionar archivo ZIP")
 
     def open_output_folder(e):
         output_folder = os.path.join(os.getcwd(), "processed_images")
@@ -152,4 +157,4 @@ def main(page: ft.Page):
     )
 
 if __name__ == "__main__":
-    ft.app(target=main, view=ft.WEB_BROWSER)
+    ft.app(target=main, view=ft.FLET_APP)
